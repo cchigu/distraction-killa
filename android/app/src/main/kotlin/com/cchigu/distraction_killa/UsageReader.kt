@@ -120,16 +120,29 @@ class UsageReader(private val context: Context) {
             .filter { (pkg, ms) -> ms >= 1000 && pkg !in ignore && isUserApp(pkg) }
             .entries
             .sortedByDescending { it.value }
-            .map { (pkg, ms) ->
-                val info = try { pm.getApplicationInfo(pkg, 0) } catch (e: Exception) { null }
-                mapOf(
-                    "package" to pkg,
-                    "name" to (info?.let { pm.getApplicationLabel(it).toString() } ?: pkg),
-                    "ms" to ms,
-                    "category" to (info?.category ?: -1),
-                    "icon" to iconBytes(pkg),
-                )
-            }
+            .map { (pkg, ms) -> appInfo(pkg) + ("ms" to ms) }
+    }
+
+    /** Every app with a launcher icon (except this one and launchers), A-Z. */
+    fun installedApps(): List<Map<String, Any?>> {
+        val ignore = launcherPackages() + context.packageName
+        val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        return pm.queryIntentActivities(launcher, 0)
+            .map { it.activityInfo.packageName }
+            .distinct()
+            .filter { it !in ignore }
+            .map { appInfo(it) }
+            .sortedBy { (it["name"] as String).lowercase() }
+    }
+
+    fun appInfo(pkg: String): Map<String, Any?> {
+        val info = try { pm.getApplicationInfo(pkg, 0) } catch (e: Exception) { null }
+        return mapOf(
+            "package" to pkg,
+            "name" to (info?.let { pm.getApplicationLabel(it).toString() } ?: pkg),
+            "category" to (info?.category ?: -1),
+            "icon" to iconBytes(pkg),
+        )
     }
 
     private fun isUserApp(pkg: String): Boolean = pm.getLaunchIntentForPackage(pkg) != null

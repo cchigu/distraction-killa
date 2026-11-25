@@ -47,6 +47,27 @@ class MainActivity : FlutterActivity() {
                         UsageReader(applicationContext).siteUsage(ranges(call.argument("ranges")))
                     }
 
+                    "installedApps" -> runInBackground(result) {
+                        UsageReader(applicationContext).installedApps()
+                    }
+
+                    "otherBrowsers" -> runInBackground(result) {
+                        val reader = UsageReader(applicationContext)
+                        Browsers.untracked(applicationContext).map { reader.appInfo(it)["name"] }.sortedBy { it.toString() }
+                    }
+
+                    "getBlockRules" -> result.success(BlockRules.toMap(this))
+
+                    "setBlockRules" -> {
+                        BlockRules.save(
+                            this,
+                            call.argument<Boolean>("enabled") ?: false,
+                            call.argument<List<String>>("apps").orEmpty(),
+                            call.argument<List<String>>("sites").orEmpty(),
+                        )
+                        result.success(null)
+                    }
+
                     "trackingSince" -> runInBackground(result) {
                         SiteLog.get(applicationContext).firstTs()
                     }

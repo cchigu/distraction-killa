@@ -1,6 +1,10 @@
 package com.cchigu.distraction_killa
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Rect
+import android.net.Uri
 import android.view.accessibility.AccessibilityNodeInfo
 
 /** Browsers we can read the address bar of, and how to find it. */
@@ -29,6 +33,16 @@ object Browsers {
     )
 
     val TRACKED: Set<String> = URL_BAR_IDS.keys
+
+    /** Installed browsers whose address bar we can't read (blocked outright at night). */
+    fun untracked(ctx: Context): Set<String> {
+        val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+        return ctx.packageManager.queryIntentActivities(probe, PackageManager.MATCH_ALL)
+            .map { it.activityInfo.packageName }
+            .filter { it !in TRACKED && it != ctx.packageName }
+            .toSet()
+    }
 }
 
 object UrlReader {

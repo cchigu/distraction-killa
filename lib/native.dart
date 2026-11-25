@@ -36,6 +36,25 @@ class Native {
       ..sort((a, b) => b.time.compareTo(a.time));
   }
 
+  /// Every app with a launcher icon, A-Z (time is zero).
+  static Future<List<AppUsage>> installedApps() async {
+    final raw = await _ch.invokeListMethod<Map>('installedApps');
+    return (raw ?? []).map((m) => AppUsage.fromMap({...m, 'ms': 0})).toList();
+  }
+
+  /// Names of installed browsers we can't read (blocked outright at night).
+  static Future<List<String>> otherBrowsers() async =>
+      (await _ch.invokeListMethod<String>('otherBrowsers')) ?? [];
+
+  static Future<BlockRules> blockRules() async =>
+      BlockRules.fromMap(await _ch.invokeMapMethod<String, dynamic>('getBlockRules') ?? {});
+
+  static Future<void> saveBlockRules(BlockRules r) => _ch.invokeMethod('setBlockRules', {
+    'enabled': r.enabled,
+    'apps': r.apps.toList(),
+    'sites': r.sites.toList(),
+  });
+
   /// When website tracking started, or null if it hasn't recorded anything yet.
   static Future<DateTime?> trackingSince() async {
     final ms = await _ch.invokeMethod<int>('trackingSince');

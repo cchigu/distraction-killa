@@ -43,6 +43,33 @@ class SiteUsage {
       SiteUsage(m['domain'] as String, Duration(milliseconds: (m['ms'] as num).toInt()));
 }
 
+class BlockRules {
+  bool enabled;
+  final Set<String> apps; // package names
+  final Set<String> sites; // domains, e.g. "youtube.com"
+  BlockRules({required this.enabled, required this.apps, required this.sites});
+
+  factory BlockRules.fromMap(Map m) => BlockRules(
+    enabled: m['enabled'] as bool? ?? false,
+    apps: {...(m['apps'] as List? ?? []).cast<String>()},
+    sites: {...(m['sites'] as List? ?? []).cast<String>()},
+  );
+}
+
+bool inBlockWindow(DateTime t) => t.hour >= kBlockStartHour || t.hour < kBlockEndHour;
+
+/// "https://www.YouTube.com/watch" -> "youtube.com". Null if it isn't a web address.
+String? normalizeDomain(String raw) {
+  var s = raw.trim().toLowerCase();
+  if (s.contains('://')) s = s.split('://')[1];
+  s = s.split(RegExp(r'[/?#:]')).first;
+  if (!RegExp(r'^([a-z0-9-]+\.)+[a-z]{2,}$').hasMatch(s)) return null;
+  for (final p in ['www.', 'm.', 'mobile.']) {
+    if (s.startsWith(p) && '.'.allMatches(s).length > 1) s = s.substring(p.length);
+  }
+  return s;
+}
+
 enum Span { today, week, nights }
 
 extension SpanX on Span {

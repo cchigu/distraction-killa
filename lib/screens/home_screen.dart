@@ -1,12 +1,12 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 
 import '../models.dart';
 import '../native.dart';
 import '../theme.dart';
+import '../widgets.dart';
+import 'block_tab.dart';
 
-enum _Tab { apps, sites }
+enum _Tab { apps, sites, block }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -82,14 +82,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       body: SafeArea(
         child: switch (_usageOk) {
           null => const SizedBox.shrink(),
-          false => const _PermissionView(
+          false => const PermissionView(
             icon: Icons.hourglass_bottom_rounded,
             title: 'See where your time goes',
             body: 'Turn on usage access for Distraction Killa.',
             button: 'Allow access',
             onTap: Native.openUsageAccessSettings,
           ),
-          true => _buildStats(),
+          true => _tab == _Tab.block ? BlockTab(a11yOk: _a11yOk) : _buildStats(),
         },
       ),
       bottomNavigationBar: _usageOk == true
@@ -99,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               destinations: const [
                 NavigationDestination(icon: Icon(Icons.apps_rounded), label: 'Apps'),
                 NavigationDestination(icon: Icon(Icons.language_rounded), label: 'Sites'),
+                NavigationDestination(icon: Icon(Icons.block_rounded), label: 'Block'),
               ],
             )
           : null,
@@ -129,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           ...header,
           const SizedBox(height: 40),
-          const _PermissionView(
+          const PermissionView(
             icon: Icons.language_rounded,
             title: 'Track your websites',
             body: 'Turn on Distraction Killa in Accessibility.\nSites are only read on this phone.',
@@ -145,11 +146,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final rows = _tab == _Tab.apps
         ? [
             for (final a in _apps)
-              (leading: _AppIcon(a.icon), title: a.name, time: a.time),
+              (leading: AppIcon(a.icon), title: a.name, time: a.time),
           ]
         : [
             for (final s in _sites)
-              (leading: _SiteIcon(s.domain), title: s.domain, time: s.time),
+              (leading: SiteIcon(s.domain), title: s.domain, time: s.time),
           ];
 
     final total = rows.fold(Duration.zero, (sum, r) => sum + r.time);
@@ -265,101 +266,6 @@ class _UsageRow extends StatelessWidget {
             child: Text(fmtDuration(time), textAlign: TextAlign.right,
                 style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AppIcon extends StatelessWidget {
-  final Uint8List? bytes;
-  const _AppIcon(this.bytes);
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: bytes != null
-          ? Image.memory(bytes!, width: 40, height: 40, gaplessPlayback: true)
-          : Container(width: 40, height: 40, color: kSurface),
-    );
-  }
-}
-
-/// The site's own favicon, or its first letter if it has none.
-class _SiteIcon extends StatelessWidget {
-  final String domain;
-  const _SiteIcon(this.domain);
-
-  @override
-  Widget build(BuildContext context) {
-    final letter = Text(
-      domain.characters.first.toUpperCase(),
-      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: kMuted),
-    );
-    return Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: kSurface, borderRadius: BorderRadius.circular(10)),
-      child: Image.network(
-        'https://$domain/favicon.ico',
-        width: 22,
-        height: 22,
-        filterQuality: FilterQuality.medium,
-        errorBuilder: (_, _, _) => letter,
-      ),
-    );
-  }
-}
-
-class _PermissionView extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String body;
-  final String button;
-  final VoidCallback onTap;
-  final String? hint;
-  final bool padded;
-
-  const _PermissionView({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.button,
-    required this.onTap,
-    this.hint,
-    this.padded = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(padded ? 32 : 0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 72, color: kAccent),
-          const SizedBox(height: 24),
-          Text(title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 10),
-          Text(body, textAlign: TextAlign.center, style: const TextStyle(color: kMuted)),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: FilledButton(
-              onPressed: onTap,
-              child: Text(button, style: const TextStyle(fontSize: 16)),
-            ),
-          ),
-          if (hint != null) ...[
-            const SizedBox(height: 14),
-            Text(hint!, textAlign: TextAlign.center,
-                style: const TextStyle(color: kMuted, fontSize: 12)),
-          ],
         ],
       ),
     );

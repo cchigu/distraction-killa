@@ -32,4 +32,19 @@ void main() {
     expect(fmtDateTime(DateTime(2026, 1, 3, 0, 30)), 'Jan 3, 12:30 AM');
     expect(fmtDateTime(DateTime(2026, 1, 3, 12, 0)), 'Jan 3, 12:00 PM');
   });
+
+  test('normalizeDomain', () {
+    expect(normalizeDomain('https://www.YouTube.com/watch?v=1'), 'youtube.com');
+    expect(normalizeDomain('m.reddit.com/r/all'), 'reddit.com');
+    expect(normalizeDomain('x.com'), 'x.com');
+    expect(normalizeDomain('instagram'), isNull);
+    expect(normalizeDomain('two words.com'), isNull);
+  });
+
+  test('inBlockWindow', () {
+    expect(inBlockWindow(DateTime(2026, 1, 1, 21)), isTrue);
+    expect(inBlockWindow(DateTime(2026, 1, 1, 8, 59)), isTrue);
+    expect(inBlockWindow(DateTime(2026, 1, 1, 9)), isFalse);
+    expect(inBlockWindow(DateTime(2026, 1, 1, 20, 59)), isFalse);
+  });
 }

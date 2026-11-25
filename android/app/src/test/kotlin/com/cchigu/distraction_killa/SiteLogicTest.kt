@@ -46,3 +46,26 @@ class SiteLogicTest {
         assertEquals(mapOf("x.com" to 60L), totals)
     }
 }
+
+class BlockRulesTest {
+    @Test
+    fun window_is_9pm_to_9am() {
+        assertEquals(true, BlockRules.inWindow(21))
+        assertEquals(true, BlockRules.inWindow(23))
+        assertEquals(true, BlockRules.inWindow(0))
+        assertEquals(true, BlockRules.inWindow(8))
+        assertEquals(false, BlockRules.inWindow(9))
+        assertEquals(false, BlockRules.inWindow(15))
+        assertEquals(false, BlockRules.inWindow(20))
+    }
+
+    @Test
+    fun site_rules_cover_subdomains_only() {
+        val sites = setOf("youtube.com", "x.com")
+        assertEquals(true, BlockRules.siteBlocked("youtube.com", sites))
+        assertEquals(true, BlockRules.siteBlocked("music.youtube.com", sites))
+        assertEquals(false, BlockRules.siteBlocked("notyoutube.com", sites))
+        assertEquals(false, BlockRules.siteBlocked("box.com", sites))
+        assertEquals(false, BlockRules.siteBlocked("", sites))
+    }
+}
