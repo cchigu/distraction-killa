@@ -6,7 +6,7 @@ Android app (Flutter + Kotlin) that finds your phone time sinks and blocks them 
 1. **Usage stats** – per-app screen time: Today / 7 days / Nights (9 PM–9 AM) ✅
 2. **Website tracking** – time per site in Firefox, Chrome, Samsung Internet (accessibility service) ✅
 3. **Blocker** – pick apps + sites (sorted by your usage), "Killed." screen 9 PM–9 AM, unreadable browsers blocked too ✅
-4. **Lockdown** – hard to bypass: guards its own settings/uninstall during the window, delayed loosening
+4. **Lockdown** – 9 PM–9 AM: switch + lists locked (can only block more), own settings + date & time guarded; uninstall from home screen still works ✅
 5. **Polish** – icon, final UI pass, release build
 
 ## Run

@@ -84,3 +84,22 @@ class BlockRulesTest {
         assertEquals(false, BlockRules.siteBlocked("", sites))
     }
 }
+
+class LockTest {
+    private val old = BlockRules.Rules(true, setOf("ig"), setOf("reddit.com"))
+
+    @Test
+    fun locked_only_allows_stricter() {
+        val tried = BlockRules.Rules(false, setOf("tiktok"), emptySet()) // switch off + unblock reddit/ig
+        assertEquals(
+            BlockRules.Rules(true, setOf("ig", "tiktok"), setOf("reddit.com")),
+            BlockRules.merge(locked = true, old = old, new = tried),
+        )
+    }
+
+    @Test
+    fun unlocked_allows_anything() {
+        val tried = BlockRules.Rules(false, emptySet(), emptySet())
+        assertEquals(tried, BlockRules.merge(locked = false, old = old, new = tried))
+    }
+}

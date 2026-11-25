@@ -24,6 +24,15 @@ class KillaService : AccessibilityService() {
         private const val WATCH_INTERVAL_MS = 1000L
         private const val BLOCK_COOLDOWN_MS = 700L
         private const val BROWSER_REFRESH_MS = 10 * 60 * 1000L
+        private const val GUARD_DELAY_MS = 250L
+
+        /** Settings apps (stock Android + Samsung's separate Accessibility app). */
+        private val SETTINGS_PKGS = setOf(
+            "com.android.settings",
+            "com.samsung.accessibility",
+            "com.google.android.settings.intelligence",
+        )
+        private const val DATE_TIME_LABEL = "Automatic date and time"
 
         fun isEnabled(context: Context): Boolean {
             val me = ComponentName(context, KillaService::class.java)
@@ -39,6 +48,8 @@ class KillaService : AccessibilityService() {
     private val lastDomainByPkg = HashMap<String, String>()
     private val scanRunnable = Runnable { scan() }
     private val watchRunnable = Runnable { watch() }
+    private val guardRunnable = Runnable { guardPending = false; guard() }
+    private var guardPending = false
     private var watching = false
 
     private var lastBlockAt = 0L
@@ -54,6 +65,15 @@ class KillaService : AccessibilityService() {
             startWatching()
             // Only act if that app really is the one on screen (not a background update).
             if (rootInActiveWindow?.packageName?.toString() == pkg) blockApp(pkg)
+            return
+        }
+
+        if (active && pkg in SETTINGS_PKGS) {
+            startWatching()
+            if (!guardPending) {
+                guardPending = true
+                handler.postDelayed(guardRunnable, GUARD_DELAY_MS)
+            }
             return
         }
 
@@ -116,9 +136,41 @@ class KillaService : AccessibilityService() {
             pkg == packageName -> return // our "Killed." screen is up
             appBlocked(pkg) -> blockApp(pkg)
             pkg in Browsers.TRACKED -> checkBrowser(pkg, root)
+            pkg in SETTINGS_PKGS -> guardSettings(root)
             else -> return // nothing to watch; the next event restarts this
         }
         startWatching()
+    }
+
+    private fun guard() {
+        if (!BlockRules.active(this)) return
+        val root = rootInActiveWindow ?: return
+        if (root.packageName?.toString() in SETTINGS_PKGS) guardSettings(root)
+    }
+
+    /**
+     * During blocking hours, keep the user out of this app's own settings (accessibility
+     * toggle, App info → Force stop / Clear data) and the clock settings.
+     * Uninstalling from the home screen still works.
+     */
+    private fun guardSettings(root: AccessibilityNodeInfo) {
+        fun visible(text: String) = try {
+            root.findAccessibilityNodeInfosByText(text).any { it.isVisibleToUser }
+        } catch (e: Exception) {
+            false
+        }
+        val message = when {
+            visible(appName(packageName)) -> "Distraction Killa's settings are locked until 9 AM"
+            visible(DATE_TIME_LABEL) -> "Date & time settings are locked until 9 AM"
+            else -> return
+        }
+        if (!cooledDown()) return
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        startActivity(
+            Intent(this, BlockActivity::class.java)
+                .putExtra(BlockActivity.EXTRA_MESSAGE, message)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        )
     }
 
     private fun blockApp(pkg: String) {
@@ -170,6 +222,7 @@ class KillaService : AccessibilityService() {
     override fun onDestroy() {
         handler.removeCallbacks(scanRunnable)
         handler.removeCallbacks(watchRunnable)
+        handler.removeCallbacks(guardRunnable)
         super.onDestroy()
     }
 }

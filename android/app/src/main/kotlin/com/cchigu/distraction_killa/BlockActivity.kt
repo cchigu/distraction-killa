@@ -16,6 +16,7 @@ class BlockActivity : Activity() {
 
     companion object {
         const val EXTRA_WHAT = "what"
+        const val EXTRA_MESSAGE = "message" // optional full sentence instead of "<what> is blocked…"
         private const val BG = 0xFF0D0F12.toInt()
         private const val TEXT = 0xFFF2F5F8.toInt()
         private const val MUTED = 0xFF8A939E.toInt()
@@ -25,7 +26,7 @@ class BlockActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.decorView.setBackgroundColor(BG)
-        setContentView(buildView(intent.getStringExtra(EXTRA_WHAT) ?: "This"))
+        setContentView(buildView(messageOf(intent)))
 
         if (Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
@@ -36,8 +37,11 @@ class BlockActivity : Activity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setContentView(buildView(intent.getStringExtra(EXTRA_WHAT) ?: "This"))
+        setContentView(buildView(messageOf(intent)))
     }
+
+    private fun messageOf(i: Intent): String =
+        i.getStringExtra(EXTRA_MESSAGE) ?: "${i.getStringExtra(EXTRA_WHAT) ?: "This"} is blocked until 9 AM"
 
     @Deprecated("Pre-Android 13 back handling")
     override fun onBackPressed() = leave()
@@ -52,7 +56,7 @@ class BlockActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    private fun buildView(what: String) = LinearLayout(this).apply {
+    private fun buildView(message: String) = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
         setBackgroundColor(BG)
@@ -66,7 +70,7 @@ class BlockActivity : Activity() {
             gravity = Gravity.CENTER
         })
         addView(TextView(context).apply {
-            text = "$what is blocked until 9 AM"
+            text = message
             textSize = 17f
             setTextColor(MUTED)
             gravity = Gravity.CENTER

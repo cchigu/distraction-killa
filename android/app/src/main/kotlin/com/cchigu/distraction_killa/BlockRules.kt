@@ -17,13 +17,25 @@ object BlockRules {
     fun apps(ctx: Context): Set<String> = prefs(ctx).getStringSet("apps", null) ?: emptySet()
     fun sites(ctx: Context): Set<String> = prefs(ctx).getStringSet("sites", null) ?: emptySet()
 
+    data class Rules(val enabled: Boolean, val apps: Set<String>, val sites: Set<String>)
+
+    /** Saves new rules. During blocking hours only stricter changes are kept. */
     fun save(ctx: Context, enabled: Boolean, apps: Collection<String>, sites: Collection<String>) {
+        val r = merge(
+            locked = active(ctx),
+            old = Rules(enabled(ctx), apps(ctx), sites(ctx)),
+            new = Rules(enabled, apps.toSet(), sites.toSet()),
+        )
         prefs(ctx).edit()
-            .putBoolean("enabled", enabled)
-            .putStringSet("apps", HashSet(apps))
-            .putStringSet("sites", HashSet(sites))
+            .putBoolean("enabled", r.enabled)
+            .putStringSet("apps", HashSet(r.apps))
+            .putStringSet("sites", HashSet(r.sites))
             .apply()
     }
+
+    /** While locked: can't switch off or unblock anything, but can block more. */
+    fun merge(locked: Boolean, old: Rules, new: Rules): Rules =
+        if (!locked) new else Rules(true, old.apps + new.apps, old.sites + new.sites)
 
     fun toMap(ctx: Context): Map<String, Any> = mapOf(
         "enabled" to enabled(ctx),

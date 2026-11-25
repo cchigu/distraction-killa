@@ -67,6 +67,34 @@ class _BlockTabState extends State<BlockTab> {
     });
   }
 
+  /// 9 PM – 9 AM with blocking on: only stricter changes allowed (also enforced natively).
+  bool get _locked => (_rules?.enabled ?? false) && inBlockWindow(DateTime.now());
+
+  void _showLocked() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Locked until 9 AM')));
+  }
+
+  Future<void> _setEnabled(bool v) async {
+    if (!v && _locked) return _showLocked();
+    if (v && inBlockWindow(DateTime.now())) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Lock until 9 AM?'),
+          content: const Text("You won't be able to turn this off or unblock anything until 9 AM."),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Lock')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    _update((r) => r.enabled = v);
+  }
+
   void _update(void Function(BlockRules r) change) {
     final r = _rules;
     if (r == null) return;
@@ -74,8 +102,10 @@ class _BlockTabState extends State<BlockTab> {
     Native.saveBlockRules(r);
   }
 
-  void _toggle(Set<String> set, String item) =>
-      _update((_) => set.contains(item) ? set.remove(item) : set.add(item));
+  void _toggle(Set<String> set, String item) {
+    if (set.contains(item) && _locked) return _showLocked();
+    _update((_) => set.contains(item) ? set.remove(item) : set.add(item));
+  }
 
   Future<void> _addSite() async {
     final domain = await showDialog<String>(context: context, builder: (_) => const _AddSiteDialog());
@@ -101,10 +131,7 @@ class _BlockTabState extends State<BlockTab> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: .3),
           ),
           const SizedBox(height: 20),
-          _StatusCard(
-            enabled: rules.enabled,
-            onChanged: (v) => _update((r) => r.enabled = v),
-          ),
+          _StatusCard(enabled: rules.enabled, locked: _locked, onChanged: _setEnabled),
           if (!widget.a11yOk) ...[
             const SizedBox(height: 12),
             _Notice(
@@ -121,6 +148,7 @@ class _BlockTabState extends State<BlockTab> {
               title: a.name,
               time: _appTime[a.package],
               selected: rules.apps.contains(a.package),
+              locked: _locked,
               onTap: () => _toggle(rules.apps, a.package),
             ),
           if (_apps.length > _appsShown)
@@ -138,6 +166,7 @@ class _BlockTabState extends State<BlockTab> {
               title: s,
               time: _siteTime[s],
               selected: rules.sites.contains(s),
+              locked: _locked,
               onTap: () => _toggle(rules.sites, s),
             ),
           const SizedBox(height: 8),
@@ -164,16 +193,16 @@ class _BlockTabState extends State<BlockTab> {
 
 class _StatusCard extends StatelessWidget {
   final bool enabled;
+  final bool locked;
   final ValueChanged<bool> onChanged;
-  const _StatusCard({required this.enabled, required this.onChanged});
+  const _StatusCard({required this.enabled, required this.locked, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    final now = inBlockWindow(DateTime.now());
     final status = !enabled
         ? 'Off'
-        : now
-            ? 'Blocking now · until 9 AM'
+        : locked
+            ? 'Locked · until 9 AM'
             : 'Starts at 9 PM';
 
     return Container(
@@ -194,7 +223,13 @@ class _StatusCard extends StatelessWidget {
               ],
             ),
           ),
-          Switch(value: enabled, onChanged: onChanged),
+          if (locked)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Icon(Icons.lock_rounded, color: kAccent, size: 30),
+            )
+          else
+            Switch(value: enabled, onChanged: onChanged),
         ],
       ),
     );
@@ -248,9 +283,11 @@ class _PickRow extends StatelessWidget {
   final String title;
   final Duration? time;
   final bool selected;
+  final bool locked;
   final VoidCallback onTap;
 
   const _PickRow({
+    required this.locked,
     required this.leading,
     required this.title,
     required this.time,
@@ -285,8 +322,10 @@ class _PickRow extends StatelessWidget {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 150),
               child: Icon(
-                selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                key: ValueKey(selected),
+                selected
+                    ? (locked ? Icons.lock_rounded : Icons.check_circle_rounded)
+                    : Icons.circle_outlined,
+                key: ValueKey((selected, locked)),
                 color: selected ? kAccent : kMuted,
                 size: 28,
               ),
