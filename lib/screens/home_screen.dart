@@ -108,10 +108,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildStats() {
     final header = [
-      const Text(
-        'Distraction Killa',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: .3),
-      ),
+      const AppHeader(),
       const SizedBox(height: 20),
       SegmentedButton<Span>(
         showSelectedIcon: false,

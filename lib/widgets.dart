@@ -99,3 +99,25 @@ class PermissionView extends StatelessWidget {
     );
   }
 }
+
+/// App name with the slashed-clock icon, shown at the top of every tab.
+class AppHeader extends StatelessWidget {
+  const AppHeader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(7),
+          child: Image.asset('assets/icon.png', width: 28, height: 28),
+        ),
+        const SizedBox(width: 10),
+        const Text(
+          'Distraction Killa',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: .3),
+        ),
+      ],
+    );
+  }
+}

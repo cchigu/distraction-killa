@@ -126,10 +126,7 @@ class _BlockTabState extends State<BlockTab> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         children: [
-          const Text(
-            'Distraction Killa',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: .3),
-          ),
+          const AppHeader(),
           const SizedBox(height: 20),
           _StatusCard(enabled: rules.enabled, locked: _locked, onChanged: _setEnabled),
           if (!widget.a11yOk) ...[
