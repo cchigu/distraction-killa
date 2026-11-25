@@ -26,6 +26,21 @@ class SiteLogicTest {
     }
 
     @Test
+    fun firefoxLabel_readsComposeToolbar() {
+        // Format from Firefox's Origin.kt: "<title> <url>. <hint>"
+        assertEquals("reddit.com", UrlReader.firefoxLabel(
+            "when rockstar updates gta 6, what should they improve first? reddit.com/r/rockstar/comments/abc. Search or enter address"))
+        assertEquals("reddit.com", UrlReader.firefoxLabel(" reddit.com. Search or enter address")) // no title
+        assertEquals("x.com", UrlReader.firefoxLabel("Home. Ends with a dot. x.com/home. Search or enter address"))
+        assertEquals("", UrlReader.firefoxLabel("Search or enter address"))               // blank tab
+        assertEquals("", UrlReader.firefoxLabel("Firefox about:home. Search or enter address")) // non-web
+        assertEquals("", UrlReader.firefoxLabel("cats - Google cute cats. Search or enter address")) // search terms
+        assertNull(UrlReader.firefoxLabel("Close tab"))
+        assertNull(UrlReader.firefoxLabel("reddit.com"))
+        assertNull(UrlReader.firefoxLabel(null))
+    }
+
+    @Test
     fun credit_splitsBrowserTimeBySite() {
         val totals = HashMap<String, Long>()
         val visits = listOf(

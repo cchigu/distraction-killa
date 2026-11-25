@@ -90,8 +90,8 @@ class KillaService : AccessibilityService() {
             lastDomainByPkg[pkg] = read
             SiteLog.get(this).add(System.currentTimeMillis(), pkg, read)
         }
-        // Toolbar hidden (e.g. scrolled away)? Assume it's still the last site we saw.
-        val domain = read ?: lastDomainByPkg[pkg] ?: return
+        // No address bar on screen (tab list, menus, typing): nothing to block.
+        val domain = read ?: return
         if (BlockRules.active(this) && BlockRules.siteBlocked(domain, BlockRules.sites(this))) {
             blockSite(domain)
         }
