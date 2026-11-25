@@ -34,6 +34,15 @@ class AppUsage {
   );
 }
 
+class SiteUsage {
+  final String domain;
+  final Duration time;
+  const SiteUsage(this.domain, this.time);
+
+  factory SiteUsage.fromMap(Map m) =>
+      SiteUsage(m['domain'] as String, Duration(milliseconds: (m['ms'] as num).toInt()));
+}
+
 enum Span { today, week, nights }
 
 extension SpanX on Span {
@@ -66,6 +75,14 @@ extension SpanX on Span {
         return out;
     }
   }
+}
+
+/// "Nov 24, 9:58 PM"
+String fmtDateTime(DateTime t) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  final h = t.hour % 12 == 0 ? 12 : t.hour % 12;
+  final m = t.minute.toString().padLeft(2, '0');
+  return '${months[t.month - 1]} ${t.day}, $h:$m ${t.hour < 12 ? 'AM' : 'PM'}';
 }
 
 /// "2h 14m", "45m", "<1m"

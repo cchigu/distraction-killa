@@ -26,6 +26,7 @@ class UsageReader(private val context: Context) {
         const val LOCKED = 17          // KEYGUARD_SHOWN
         const val SHUTDOWN = 26        // DEVICE_SHUTDOWN
         const val LOOKBACK_MS = 3 * 60 * 60 * 1000L
+        const val SITE_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000L // find which site was open when a browser resumes
         const val ICON_PX = 96
     }
 
@@ -33,14 +34,15 @@ class UsageReader(private val context: Context) {
     fun foregroundTimes(ranges: List<Pair<Long, Long>>): Map<String, Long> {
         val totals = HashMap<String, Long>()
         for ((start, end) in ranges) {
-            for ((pkg, ms) in foregroundTimes(start, end)) {
-                totals[pkg] = (totals[pkg] ?: 0L) + ms
+            for ((pkg, spans) in foregroundIntervals(start, end)) {
+                totals[pkg] = (totals[pkg] ?: 0L) + spans.sumOf { it.second - it.first }
             }
         }
         return totals
     }
 
-    private fun foregroundTimes(start: Long, end: Long): Map<String, Long> {
+    /** Each on-screen stretch per package within [start, end], as (from, to) pairs. */
+    fun foregroundIntervals(start: Long, end: Long): Map<String, List<Pair<Long, Long>>> {
         val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val now = System.currentTimeMillis()
         val stop = minOf(end, now)
@@ -48,7 +50,7 @@ class UsageReader(private val context: Context) {
 
         // Look back a bit so an app already open at `start` is counted from `start`.
         val events = usm.queryEvents(start - LOOKBACK_MS, stop)
-        val totals = HashMap<String, Long>()
+        val out = HashMap<String, MutableList<Pair<Long, Long>>>()
 
         var curPkg: String? = null
         var curStart = 0L
@@ -58,7 +60,7 @@ class UsageReader(private val context: Context) {
             val p = curPkg ?: return
             val s = maxOf(curStart, start)
             val e = minOf(t, stop)
-            if (e > s) totals[p] = (totals[p] ?: 0L) + (e - s)
+            if (e > s) out.getOrPut(p) { mutableListOf() }.add(s to e)
             curPkg = null
             openActivities.clear()
         }
@@ -86,7 +88,29 @@ class UsageReader(private val context: Context) {
             }
         }
         close(stop)
-        return totals
+        return out
+    }
+
+    /**
+     * Time per website: every moment a browser was on screen is credited to the
+     * site its address bar last showed (from [SiteLog]).
+     */
+    fun siteUsage(ranges: List<Pair<Long, Long>>): List<Map<String, Any>> {
+        val log = SiteLog.get(context)
+        val totals = HashMap<String, Long>()
+        for ((start, end) in ranges) {
+            val intervals = foregroundIntervals(start, end).filterKeys { it in Browsers.TRACKED }
+            if (intervals.isEmpty()) continue
+            val visits = log.visits(start - SITE_LOOKBACK_MS, end)
+            for ((pkg, spans) in intervals) {
+                SiteTime.credit(spans, visits[pkg] ?: continue, totals)
+            }
+        }
+
+        return totals.entries
+            .filter { it.value >= 1000 }
+            .sortedByDescending { it.value }
+            .map { mapOf("domain" to it.key, "ms" to it.value) }
     }
 
     /** Usage for real, user-facing apps only (no launcher, system UI, or this app). */

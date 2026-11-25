@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_summary">Tracks website time and blocks distractions</string>
+    <string name="a11y_description">Distraction Killa reads the address bar in Firefox, Chrome and Samsung Internet to see which websites you spend time on, and blocks distracting apps and sites during your blocked hours. Everything stays on this phone.</string>
+</resources>

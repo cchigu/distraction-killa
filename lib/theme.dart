@@ -15,5 +15,10 @@ ThemeData buildTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: kBg,
     splashFactory: InkSparkle.splashFactory,
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: kBg,
+      indicatorColor: kAccent.withValues(alpha: .22),
+      height: 68,
+    ),
   );
 }

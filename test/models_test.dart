@@ -26,4 +26,10 @@ void main() {
     expect(r.first.start, DateTime(2026, 11, 23, 21));
     expect(r.first.end, DateTime(2026, 11, 24, 9));
   });
+
+  test('fmtDateTime', () {
+    expect(fmtDateTime(DateTime(2026, 11, 24, 21, 8)), 'Nov 24, 9:08 PM');
+    expect(fmtDateTime(DateTime(2026, 1, 3, 0, 30)), 'Jan 3, 12:30 AM');
+    expect(fmtDateTime(DateTime(2026, 1, 3, 12, 0)), 'Jan 3, 12:00 PM');
+  });
 }

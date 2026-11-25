@@ -1,6 +1,7 @@
 package com.cchigu.distraction_killa
 
 import android.app.AppOpsManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -30,23 +31,57 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
 
-                    "getAppUsage" -> {
-                        // ranges: [[startMs, endMs], ...]
-                        val raw = call.argument<List<List<Number>>>("ranges") ?: emptyList()
-                        val ranges = raw.map { it[0].toLong() to it[1].toLong() }
-                        worker.execute {
-                            try {
-                                val data = UsageReader(applicationContext).appUsage(ranges)
-                                mainThread.post { result.success(data) }
-                            } catch (e: Exception) {
-                                mainThread.post { result.error("usage_failed", e.message, null) }
-                            }
-                        }
+                    "hasAccessibility" -> result.success(KillaService.isEnabled(this))
+
+                    "openAccessibilitySettings" -> {
+                        openAccessibilitySettings()
+                        result.success(null)
+                    }
+
+                    // ranges: [[startMs, endMs], ...]
+                    "getAppUsage" -> runInBackground(result) {
+                        UsageReader(applicationContext).appUsage(ranges(call.argument("ranges")))
+                    }
+
+                    "getSiteUsage" -> runInBackground(result) {
+                        UsageReader(applicationContext).siteUsage(ranges(call.argument("ranges")))
+                    }
+
+                    "trackingSince" -> runInBackground(result) {
+                        SiteLog.get(applicationContext).firstTs()
                     }
 
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun ranges(raw: List<List<Number>>?): List<Pair<Long, Long>> =
+        raw.orEmpty().map { it[0].toLong() to it[1].toLong() }
+
+    private fun runInBackground(result: MethodChannel.Result, work: () -> Any?) {
+        worker.execute {
+            try {
+                val data = work()
+                mainThread.post { result.success(data) }
+            } catch (e: Exception) {
+                mainThread.post { result.error("native_failed", e.message, null) }
+            }
+        }
+    }
+
+    private fun openAccessibilitySettings() {
+        // Try this app's own accessibility page; fall back to the full list.
+        try {
+            startActivity(
+                Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS").putExtra(
+                    Intent.EXTRA_COMPONENT_NAME,
+                    ComponentName(this, KillaService::class.java).flattenToString(),
+                )
+            )
+        } catch (e: Exception) {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
     }
 
     private fun hasUsageAccess(): Boolean {

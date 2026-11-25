@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/usage_screen.dart';
+import 'screens/home_screen.dart';
 import 'theme.dart';
 
 void main() => runApp(const DistractionKilla());
@@ -14,7 +14,7 @@ class DistractionKilla extends StatelessWidget {
       title: 'Distraction Killa',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
-      home: const UsageScreen(),
+      home: const HomeScreen(),
     );
   }
 }
