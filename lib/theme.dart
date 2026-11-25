@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/material.dart';
 
 const kBg = Color(0xFF0D0D0F);
 const kSurface = Color(0xFF1A1A1E);

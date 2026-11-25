@@ -14,4 +14,4 @@ Android app (Flutter + Kotlin) that finds your phone time sinks and blocks them 
 flutter pub get
 flutter run        # phone plugged in with USB debugging
 ```
-Needs Flutter 3.50+ (`flutter upgrade`).
+Needs Flutter 3.47+.
